@@ -1,0 +1,231 @@
+---
+title: "ps5-work"
+author: "Timur"
+date: "2023-02-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## 1) Load and Check Data (5pt)
+### 2.
+```{r}
+library(tidyverse)
+gap <- read_delim("data/gapminder.csv.bz2")
+nrow(gap)
+ncol(gap)
+```
+### 3.
+```{r}
+gap %>%
+  sample_n(3) %>%
+  print()
+```
+#### It does look ok
+
+## 2 Descriptive Statistics (15pt)
+### 1.
+```{r}
+gap %>% 
+  summarize(iso3names = n_distinct(iso3)) %>% 
+  print()
+gap %>% 
+  summarize(iso2names = n_distinct(iso2)) %>% 
+  print()
+gap %>% 
+  summarize(names = n_distinct(name)) %>% 
+  print()
+```
+### 2. a)
+```{r}
+gap %>% 
+  group_by(iso2) %>% 
+  summarize(names_under_iso2 = n_distinct(name)) %>% 
+  filter(names_under_iso2 > 1) %>% 
+  print()
+```
+#### There are no countries with multiple iso-2 codes, however there are two countries without iso-2 codes, which is why N/A shows up when we filter for countries with more than one iso-2 code.
+
+
+### 2. b)
+``` {r}
+gap %>% 
+  group_by(name) %>% 
+  summarize(iso3_under_name = n_distinct(iso3)) %>% 
+  filter(iso3_under_name>1) %>% 
+  print()
+```
+#### I was a tad confused by this question, as no countries did have more than one iso3. The two hints, which were CHANISL, and NLD CURACO, did not have a value in name. The value was in iso3. So, there were four countries that did not have a name value, and they did have an iso3 value.
+
+### 3.
+``` {r}
+gap %>% 
+  summarize(max_year = max(time, na.rm = TRUE)) %>% 
+  print()
+gap %>% 
+  summarize(min_year =min(time, na.rm = TRUE)) %>% 
+  print()
+```
+
+## 3 CO2 Emissions (30pt)
+### 1.
+``` {r}
+gap %>% 
+  group_by(time) %>% 
+  summarize(num_na = sum(is.na(co2))) %>% 
+  arrange(desc(num_na)) %>% 
+  head(5)
+
+gap %>% 
+  group_by(time) %>% 
+  summarize(num_na = sum(is.na(co2_PC))) %>% 
+  arrange(desc(num_na)) %>% 
+  head(5)
+```
+### 2.
+```{r, error= TRUE}
+countries <- c("United States of America", "India", "China", "Mexico", "Canada")
+selected_countries <- gap %>% 
+  filter(name %in% countries) %>% 
+ggplot(aes(x=time, y=co2, col=name)) +
+  geom_line()
+print(selected_countries)
+```
+#### We can say that China is much higher in total CO2 emissions compared to the others, with US in second. This was not always the case, however China skyrocketed in terms of total CO2 emissions in the 2000's, when they passed America.
+
+### 3.
+```{r}
+countries <- c("United States of America", "India", "China", "Canada", "Mexico")
+selected_countries <- gap %>% 
+  filter(name %in% countries) %>% 
+ggplot(aes(x=time, y=co2_PC, col=name)) +
+  geom_line()
+print(selected_countries)
+```
+#### This shows that per capita, China is not contributing as much CO2 compared to the US, or another developed western country in Canada. 
+
+### 4
+```{r}
+gap %>% 
+  group_by(region, time) %>% 
+  summarize(avg_region <- mean(co2_PC, na.rm = TRUE)) %>% 
+  ##sample_n(2) %>%
+  print()
+```
+#### Africa has the **lowest** CO2 emissions per capita. Furthermore Africa is mostly increasing over the time period while the other continents had their peaks **earlier**. For example, the Americas had their peak in the 70's and are in the 2010's are now roughly 50% of their old peak
+
+### 5.
+```{r}
+gap_bars <- gap %>% 
+  filter(time %in% c(1960, 2016))
+gap_bars %>% 
+  group_by(region, time) %>% 
+  summarize(avg_co2_pc = mean(co2_PC, na.rm= TRUE)) %>% 
+  ggplot(aes(x=region, y=avg_co2_pc, fill=factor(time))) +
+  geom_col(position="dodge")
+print(gap_bars)
+  
+```
+### 6
+```{r}
+gap %>% 
+  filter(time == 2019) %>% 
+  group_by(region) %>% 
+  mutate(rank = rank(desc(co2_PC))) %>% 
+  filter(rank <= 3) %>% 
+  print()
+```
+## 4 GDP per Capita (50pt)
+### 1.
+``` {r}
+gap_1960 <- gap %>% 
+  filter(time == "1960")
+p <- ggplot(gap_1960, aes(GDP_PC, lifeExpectancy, alpha = 0.5, col=region, size=totalPopulation)) +
+  geom_point()
+print(p)
+```
+#### It seems as though there is a positive correlation between GDP per capita and life expectancy. Life expectancy increases at a high rate with an increase in GDP per capita however eventually it slows down significantly. This implies there's a limit on how high life expectancy can increase
+
+### 2.
+```{r}
+gap_2019 <- gap %>% 
+  filter(time == 2019)
+p <- ggplot(gap_2019, aes(GDP_PC, lifeExpectancy, alpha=0.5, col=region, size=totalPopulation)) +
+  geom_point()
+print(p)
+```
+### 3.
+#### While there are still countries with very low GDP per capita, life expectancy has grown quite a lot over the 59 year difference, and GDP per capita on average has increased by quite a lot over all countries.
+### 4.
+```{r, error = TRUE}
+gap %>% 
+  filter(time == 1960) %>% 
+  group_by(region) %>% 
+  summarize(avg_LE <- mean(lifeExpectancy, na.rm = TRUE)) %>% 
+  print(avg_LE)
+
+gap %>% 
+  filter(time == 2019) %>% 
+  group_by(region) %>% 
+  summarize(avg_LE <- mean(lifeExpectancy, na.rm = TRUE)) %>% 
+  print(avg_LE)
+```
+#### This does track with the plot. In both we can see that there is a general **increase** in average life expectancy from 1960 to 2019.
+
+### 5.
+```{r}
+gap %>% 
+  filter(time %in% c(1960, 2019)) %>% 
+  group_by(region) %>% 
+  summarize(avg_le_1960 = mean(lifeExpectancy[time == 1960], na.rm = TRUE), avg_le_2019 = mean(lifeExpectancy[time == 2019], na.rm = TRUE)) %>% 
+  mutate(leGrowth = ((avg_le_2019 - avg_le_1960)-1)/100) %>% 
+  arrange(desc(leGrowth))
+         
+```
+#### Europe has the lowest percentage increase in life expectancy, at just 6%, however they also had the highest average life expectancy in 1960, so they had th eleast room to improve. Asia had the highest increse in life expectancy at 21.97%
+
+### 6.
+```{r}
+gap_hist <- gap %>% 
+  filter(time %in% c(1960, 2019))
+ggplot(gap_hist, aes(x=GDP_PC, fill = factor(time))) + geom_histogram(position="dodge")
+```
+### 7.
+```{r}
+gap %>% 
+  filter(time == 1960) %>% 
+  select(name, lifeExpectancy) %>% 
+  mutate(place = rank(-lifeExpectancy)-1) %>% 
+  filter(name == "United States of America") %>% 
+  print()
+gap %>% 
+  filter(time == 2019) %>% 
+  select(name, lifeExpectancy) %>% 
+  mutate(place = rank(-lifeExpectancy)-1) %>% 
+  filter(name == "United States of America") %>% 
+  print()
+```
+### 8.
+```{r}
+gap %>% 
+  filter(time == 1960) %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  arrange(desc(lifeExpectancy)) %>% 
+  mutate(place = rank(-lifeExpectancy)-1, relative_rank=place/n()) %>% 
+  filter(name == "United States of America") %>% 
+  select(name, lifeExpectancy, relative_rank) %>% 
+  print()
+
+gap %>% 
+  filter(time == 2019) %>% 
+  filter(!is.na(lifeExpectancy)) %>% 
+  arrange(desc(lifeExpectancy)) %>% 
+  mutate(place = rank(-lifeExpectancy)-1, relative_rank=place/n()) %>% 
+  filter(name == "United States of America") %>% 
+  select(name, lifeExpectancy, relative_rank) %>% 
+  print()
+```
+#### America still dropped in terms of relative rank from 1960 to 2019
